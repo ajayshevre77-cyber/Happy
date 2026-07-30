@@ -20,27 +20,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $table = '';
     
     if ($role === 'student') {
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE BINARY zprn = ?");
-        $stmt->execute([$username]);
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE BINARY zprn = ? OR email = ?");
+        $stmt->execute([$username, $username]);
         $user = $stmt->fetch();
     } elseif ($role === 'faculty') {
-        $stmt = $pdo->prepare("SELECT * FROM faculty WHERE BINARY username = ?");
-        $stmt->execute([$username]);
+        $stmt = $pdo->prepare("SELECT * FROM faculty WHERE BINARY username = ? OR email = ?");
+        $stmt->execute([$username, $username]);
         $user = $stmt->fetch();
     } elseif ($role === 'hod') {
-        $stmt = $pdo->prepare("SELECT * FROM hod WHERE BINARY username = ?");
-        $stmt->execute([$username]);
+        $stmt = $pdo->prepare("SELECT * FROM hod WHERE BINARY username = ? OR email = ?");
+        $stmt->execute([$username, $username]);
         $user = $stmt->fetch();
     } elseif ($role === 'admin') {
-        $stmt = $pdo->prepare("SELECT * FROM admin WHERE BINARY username = ?");
-        $stmt->execute([$username]);
+        $stmt = $pdo->prepare("SELECT * FROM admin WHERE BINARY username = ? OR email = ?");
+        $stmt->execute([$username, $username]);
         $user = $stmt->fetch();
     }
 
-    if ($user && password_verify($password, $user['password'])) {
-        // Strict case-sensitive check against stored username (Bugs 4 & 20)
+    $auth_success = false;
+    if ($user) {
+        if ($role === 'student') {
+            $auth_success = ($password === $user['zprn'] || password_verify($password, $user['password']));
+        } else {
+            $auth_success = password_verify($password, $user['password']);
+        }
+    }
+
+    if ($auth_success) {
+        // Strict case-sensitive check against stored username or email
         $stored_username = ($role === 'student') ? $user['zprn'] : $user['username'];
-        if ($stored_username !== $username) {
+        $stored_email = $user['email'] ?? '';
+        if ($stored_username !== $username && $stored_email !== $username) {
             $error_message = 'Invalid username or password for ' . ucfirst($role) . ' portal.';
         } else {
             // Students do not need to be forced to change password after immediate login

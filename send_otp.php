@@ -22,20 +22,21 @@ try {
     $email = '';
     
     if ($role === 'student') {
-        $stmt = $pdo->prepare("SELECT email FROM students WHERE BINARY zprn = ?");
+        $stmt = $pdo->prepare("SELECT zprn as username, email FROM students WHERE BINARY zprn = ? OR email = ?");
     } elseif ($role === 'faculty') {
-        $stmt = $pdo->prepare("SELECT email FROM faculty WHERE BINARY username = ?");
+        $stmt = $pdo->prepare("SELECT username, email FROM faculty WHERE BINARY username = ? OR email = ?");
     } elseif ($role === 'hod') {
-        $stmt = $pdo->prepare("SELECT email FROM hod WHERE BINARY username = ?");
+        $stmt = $pdo->prepare("SELECT username, email FROM hod WHERE BINARY username = ? OR email = ?");
     } elseif ($role === 'admin') {
-        $stmt = $pdo->prepare("SELECT email FROM admin WHERE BINARY username = ?");
+        $stmt = $pdo->prepare("SELECT username, email FROM admin WHERE BINARY username = ? OR email = ?");
     } else {
         echo json_encode(['success' => false, 'message' => 'Invalid role.']);
         exit;
     }
 
-    $stmt->execute([$username]);
+    $stmt->execute([$username, $username]);
     $user = $stmt->fetch();
+    $real_username = $user['username'] ?? '';
     $email = $user['email'] ?? '';
 
     if (!$user) {
@@ -58,25 +59,40 @@ try {
     
     // Store OTP securely in session
     $_SESSION['reset_otp'] = $otp;
-    $_SESSION['reset_username'] = $username;
+    $_SESSION['reset_username'] = $real_username;
+    $_SESSION['reset_input'] = $username;
     $_SESSION['reset_otp_expiry'] = time() + 300; // 5 minutes expiry
     
-    // Send email using built-in mail() function
-    $subject = 'Password Reset OTP';
-    $message = "Your OTP for password reset is: $otp\r\nThis OTP is valid for 5 minutes.";
-    
-    // Use the from address if defined in config, else default
-    $from_email = $smtp_from ?? 'noreply@example.com';
-    $headers = "From: $from_email\r\n";
-    $headers .= "Reply-To: $from_email\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
-    
-    // Suppress warnings in case mail server is not configured
-    if (@mail($email, $subject, $message, $headers)) {
+    // Send email using PHPMailer
+    require_once 'vendor/autoload.php';
+    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+
+    try {
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host       = $smtp_host ?? 'smtp.example.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $smtp_user ?? 'your_email@example.com';
+        $mail->Password   = $smtp_pass ?? 'your_app_password';
+        $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = $smtp_port ?? 587;
+
+        // Recipients
+        $from_email = $smtp_from ?? 'noreply@example.com';
+        $from_name  = $smtp_from_name ?? 'ERP System';
+        $mail->setFrom($from_email, $from_name);
+        $mail->addAddress($email);
+
+        // Content
+        $mail->isHTML(false);
+        $mail->Subject = 'Password Reset OTP';
+        $mail->Body    = "Your OTP for password reset is: $otp\r\nThis OTP is valid for 5 minutes.";
+
+        $mail->send();
         echo json_encode(['success' => true, 'message' => 'OTP sent successfully to registered email address.']);
-    } else {
-        error_log("Failed to send OTP email to $email using mail().");
-        echo json_encode(['success' => false, 'message' => 'Failed to send OTP email. Please try again later.']);
+    } catch (Exception $e) {
+        error_log("Failed to send OTP email to $email. Mailer Error: {$mail->ErrorInfo}");
+        echo json_encode(['success' => false, 'message' => 'Failed to send OTP email. Please check SMTP configuration.']);
     }
 } catch (PDOException $e) {
     echo json_encode(['success' => false, 'message' => 'Database error.']);
