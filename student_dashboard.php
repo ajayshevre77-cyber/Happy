@@ -1839,8 +1839,8 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Category <span style="color:red;">*</span></label>
-                                <select name="category" required>
+                                <label>Category </label>
+                                <select name="category">
                                     <option value="">Select Category</option>
                                     <?php
                                     $categories = ['General', 'OBC', 'SC', 'ST', 'EWS', 'SBC', 'VJNT'];
@@ -1853,32 +1853,32 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 </select>
                             </div>
                             <div class="form-group-col">
-                                <label>Cast <span style="color:red;">*</span></label>
+                                <label>Cast </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-users"></i>
-                                    <input type="text" name="cast" required value="<?= htmlspecialchars($profile_details['cast'] ?? '') ?>">
+                                    <input type="text" name="cast" value="<?= htmlspecialchars($profile_details['cast'] ?? '') ?>">
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-grid-3" style="margin-top: 1rem;">
                             <div class="form-group-col">
-                                <label>Sub Caste <span style="color:red;">*</span></label>
+                                <label>Sub Caste </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-users-line"></i>
-                                    <input type="text" name="sub_caste" required value="<?= htmlspecialchars($profile_details['sub_caste'] ?? '') ?>">
+                                    <input type="text" name="sub_caste" value="<?= htmlspecialchars($profile_details['sub_caste'] ?? '') ?>">
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Nationality <span style="color:red;">*</span></label>
+                                <label>Nationality </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-flag"></i>
-                                    <input type="text" name="nationality" required value="<?= htmlspecialchars($profile_details['nationality'] ?? 'Indian') ?>">
+                                    <input type="text" name="nationality" value="<?= htmlspecialchars($profile_details['nationality'] ?? 'Indian') ?>">
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Domicile <span style="color:red;">*</span></label>
-                                <select name="domicile" required>
+                                <label>Domicile </label>
+                                <select name="domicile">
                                     <option value="">Select Domicile State</option>
                                     <?php
                                     $states = ['Maharashtra', 'Gujarat', 'Delhi', 'Karnataka', 'Tamil Nadu', 'Uttar Pradesh', 'Other'];
@@ -1902,15 +1902,15 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 <span class="error-msg-span" id="err_personal_mobile" style="color: #ef4444; font-size: 0.8rem; display: none; margin-top: 0.25rem; font-weight: 500;"></span>
                             </div>
                             <div class="form-group-col">
-                                <label>Birth Place (Strictly as per LC) <span style="color:red;">*</span></label>
+                                <label>Birth Place (Strictly as per LC) </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-location-dot"></i>
-                                    <input type="text" name="birth_place" required value="<?= htmlspecialchars($profile_details['birth_place'] ?? '') ?>">
+                                    <input type="text" name="birth_place" value="<?= htmlspecialchars($profile_details['birth_place'] ?? '') ?>">
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Birth Country <span style="color:red;">*</span></label>
-                                <select name="birth_country" required>
+                                <label>Birth Country </label>
+                                <select name="birth_country">
                                     <option value="India" selected>India</option>
                                     <option value="USA">USA</option>
                                     <option value="UK">UK</option>
@@ -1921,8 +1921,8 @@ foreach ($db['leaves'] ?? [] as $leave) {
 
                         <div class="form-grid-3" style="margin-top: 1rem;">
                             <div class="form-group-col">
-                                <label>Birth State <span style="color:red;">*</span></label>
-                                <select name="birth_state" required>
+                                <label>Birth State </label>
+                                <select name="birth_state">
                                     <option value="">Select State</option>
                                     <?php
                                     $current_bstate = $profile_details['birth_state'] ?? '';
@@ -1934,8 +1934,8 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 </select>
                             </div>
                             <div class="form-group-col">
-                                <label>Birth District <span style="color:red;">*</span></label>
-                                <select name="birth_district" required>
+                                <label>Birth District </label>
+                                <select name="birth_district">
                                     <option value="">Select District</option>
                                     <?php
                                     $districts = ['Jalgaon', 'Pune', 'Mumbai', 'Nashik', 'Nagpur', 'Aurangabad', 'Other'];
@@ -1948,25 +1948,25 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 </select>
                             </div>
                             <div class="form-group-col">
-                                <label>Native Place <span style="color:red;">*</span></label>
+                                <label>Native Place </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-house-chimney"></i>
-                                    <input type="text" name="native_place" required value="<?= htmlspecialchars($profile_details['native_place'] ?? '') ?>">
+                                    <input type="text" name="native_place" value="<?= htmlspecialchars($profile_details['native_place'] ?? '') ?>">
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-grid-3" style="margin-top: 1rem;">
                             <div class="form-group-col">
-                                <label>Native Country <span style="color:red;">*</span></label>
-                                <select name="native_country" required>
+                                <label>Native Country </label>
+                                <select name="native_country">
                                     <option value="India" selected>India</option>
                                     <option value="Other">Other</option>
                                 </select>
                             </div>
                             <div class="form-group-col">
-                                <label>Native State <span style="color:red;">*</span></label>
-                                <select name="native_state" required>
+                                <label>Native State </label>
+                                <select name="native_state">
                                     <option value="">Select Native State</option>
                                     <?php
                                     $current_nstate = $profile_details['native_state'] ?? '';
@@ -1978,8 +1978,8 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 </select>
                             </div>
                             <div class="form-group-col">
-                                <label>Native District <span style="color:red;">*</span></label>
-                                <select name="native_district" required>
+                                <label>Native District </label>
+                                <select name="native_district">
                                     <option value="">Select Native District</option>
                                     <?php
                                     $current_ndist = $profile_details['native_district'] ?? '';
@@ -1994,22 +1994,22 @@ foreach ($db['leaves'] ?? [] as $leave) {
 
                         <div class="form-grid-3" style="margin-top: 1rem;">
                             <div class="form-group-col">
-                                <label>Primary Email (Personal) <span style="color:red;">*</span></label>
+                                <label>Primary Email (Personal) </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-envelope"></i>
-                                    <input type="email" id="primary_email" name="primary_email" required value="<?= htmlspecialchars($profile_details['primary_email'] ?? '') ?>" oninput="validateEmails()">
+                                    <input type="email" id="primary_email" name="primary_email" value="<?= htmlspecialchars($profile_details['primary_email'] ?? '') ?>" oninput="validateEmails()">
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Alternate Email <span style="color:red;">*</span></label>
+                                <label>Alternate Email </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-envelope"></i>
-                                    <input type="email" id="alternate_email" name="alternate_email" required value="<?= htmlspecialchars($profile_details['alternate_email'] ?? '') ?>" oninput="validateEmails()">
+                                    <input type="email" id="alternate_email" name="alternate_email" value="<?= htmlspecialchars($profile_details['alternate_email'] ?? '') ?>" oninput="validateEmails()">
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Blood Group <span style="color:red;">*</span></label>
-                                <select name="blood_group" required>
+                                <label>Blood Group </label>
+                                <select name="blood_group">
                                     <option value="">Select Blood Group</option>
                                     <?php
                                     $b_groups = ['A+ve', 'A-ve', 'B+ve', 'B-ve', 'O+ve', 'O-ve', 'AB+ve', 'AB-ve'];
@@ -2025,22 +2025,22 @@ foreach ($db['leaves'] ?? [] as $leave) {
 
                         <div class="form-grid-3" style="margin-top: 1rem;">
                             <div class="form-group-col">
-                                <label>Anti Ragging Undertaking No <span style="color:red;">*</span></label>
+                                <label>Anti Ragging Undertaking No </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-shield-halved"></i>
-                                    <input type="text" name="anti_ragging_no" required value="<?= htmlspecialchars($profile_details['anti_ragging_no'] ?? '') ?>">
+                                    <input type="text" name="anti_ragging_no" value="<?= htmlspecialchars($profile_details['anti_ragging_no'] ?? '') ?>">
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Earning Parent Name (last first middle) <span style="color:red;">*</span></label>
+                                <label>Earning Parent Name (last first middle) </label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-user-tie"></i>
-                                    <input type="text" name="earning_parent_name" required value="<?= htmlspecialchars($profile_details['earning_parent_name'] ?? '') ?>">
+                                    <input type="text" name="earning_parent_name" value="<?= htmlspecialchars($profile_details['earning_parent_name'] ?? '') ?>">
                                 </div>
                             </div>
                             <div class="form-group-col">
-                                <label>Earning Parent Relation <span style="color:red;">*</span></label>
-                                <select name="earning_parent_relation" required>
+                                <label>Earning Parent Relation </label>
+                                <select name="earning_parent_relation">
                                     <option value="">Select Relation</option>
                                     <?php
                                     $relations = ['Father', 'Mother', 'Guardian'];
@@ -2056,8 +2056,8 @@ foreach ($db['leaves'] ?? [] as $leave) {
 
                         <div class="form-grid-3" style="margin-top: 1rem;">
                             <div class="form-group-col">
-                                <label>Career Choice <span style="color:red;">*</span></label>
-                                <select name="career_choice" required>
+                                <label>Career Choice </label>
+                                <select name="career_choice">
                                     <option value="">Select Career Choice</option>
                                     <?php
                                     $careers = ['Job / Placement', 'Higher Studies', 'Entrepreneurship', 'Civil Services', 'Other'];
@@ -2070,8 +2070,8 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 </select>
                             </div>
                             <div class="form-group-col">
-                                <label>Alumni Institute <span style="color:red;">*</span></label>
-                                <select name="alumni_institute" required>
+                                <label>Alumni Institute </label>
+                                <select name="alumni_institute">
                                     <option value="No" <?= ($profile_details['alumni_institute'] ?? 'No') === 'No' ? 'selected' : '' ?>>No</option>
                                     <option value="Yes" <?= ($profile_details['alumni_institute'] ?? 'No') === 'Yes' ? 'selected' : '' ?>>Yes</option>
                                 </select>
