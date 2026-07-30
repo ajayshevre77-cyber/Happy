@@ -109,11 +109,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
             'desc' => $desc,
             'author' => $user['name'],
             'role' => 'Faculty (' . $user['dept'] . ')',
+            'target_audience' => $user['dept'],
             'date' => date('d M Y'),
             'expiry' => $expiry,
             'attachment' => $file_name,
             'size' => $file_name ? '1.5MB' : ''
         ];
+        $db['recent_activity'] = array_merge([
+            [
+                'type' => 'notice',
+                'title' => 'New Notice: ' . $title,
+                'desc' => 'Published by ' . $user['name'],
+                'time' => 'Just now'
+            ]
+        ], array_slice($db['recent_activity'] ?? [], 0, 9));
         save_db($db);
         $_SESSION['success_message'] = "Notice published successfully.";
     } else {
@@ -230,6 +239,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array
             'description' => $description,
             'published_date' => $pub_date
         ];
+        
+        $db['recent_activity'] = array_merge([
+            [
+                'type' => 'assignment',
+                'title' => 'New Assignment: ' . $title,
+                'desc' => 'Subject: ' . $subject_name . ' | Due: ' . $formatted_due,
+                'time' => 'Just now'
+            ]
+        ], array_slice($db['recent_activity'] ?? [], 0, 9));
         
         save_db($db);
         if ($is_ajax) {
@@ -1089,8 +1107,10 @@ $db = get_db();
                                             <?php
                                             $raw_file = $sub['file_path'] ?? $sub['file'] ?? '';
                                             $decoded_paths = json_decode($raw_file, true);
-                                            $paths = is_array($decoded_paths) ? $decoded_paths : [$raw_file];
+                                            $paths = is_array($decoded_paths) ? $decoded_paths : explode(',', $raw_file);
                                             foreach ($paths as $idx => $path):
+                                                $path = trim($path);
+                                                $path = preg_replace('#^uploads/#i', '', $path);
                                                 if (empty($path)) continue;
                                             ?>
                                             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -1586,7 +1606,17 @@ $db = get_db();
         function switchTab(tabName, element) {
             const items = document.querySelectorAll('.sidebar-nav-item');
             items.forEach(item => item.classList.remove('active'));
-            element.classList.add('active');
+            if (element) {
+                element.classList.add('active');
+            } else {
+                items.forEach(item => {
+                    let onclick = item.getAttribute('onclick') || '';
+                    let dataTab = item.getAttribute('data-tab') || '';
+                    if (onclick.includes("'" + tabName + "'") || dataTab === tabName) {
+                        item.classList.add('active');
+                    }
+                });
+            }
 
             const panels = document.querySelectorAll('.app-view');
             panels.forEach(p => p.classList.remove('active'));
