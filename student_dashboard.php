@@ -379,6 +379,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if (isset($_POST['action']) && $_POST['action'] === 'change_official_email') {
+        require_once 'config.php';
+        $new_email = trim($_POST['new_email'] ?? '');
+        $verify_password = $_POST['verify_password'] ?? '';
+        
+        $auth_success = false;
+        // Verify password against students table
+        try {
+            $stmt = $pdo->prepare("SELECT * FROM students WHERE BINARY zprn = ?");
+            $stmt->execute([$student_id]);
+            $user_record = $stmt->fetch();
+            if ($user_record) {
+                if ($verify_password === $user_record['zprn'] || password_verify($verify_password, $user_record['password'])) {
+                    $auth_success = true;
+                }
+            }
+        } catch (PDOException $e) {
+            // fallback if DB query fails
+        }
+
+        if ($auth_success && !empty($new_email)) {
+            // Update in MySQL
+            try {
+                $stmt = $pdo->prepare("UPDATE students SET email = ? WHERE zprn = ? OR username = ?");
+                $stmt->execute([$new_email, $student_id, $student_id]);
+            } catch (PDOException $e) {}
+
+            // Update in db.json
+            $db = get_db();
+            foreach ($db['students'] as &$s) {
+                if ($s['id'] === $student_id) {
+                    $s['email'] = $new_email;
+                    break;
+                }
+            }
+            save_db($db);
+            
+            $_SESSION['user']['email'] = $new_email;
+            $_SESSION['success_message'] = 'Official Email updated successfully!';
+        } else {
+            $_SESSION['error_message'] = 'Incorrect password. Email update failed.';
+        }
+        header("Location: student_dashboard.php?tab=profile");
+        exit;
+    }
+
     if (isset($_POST['action']) && $_POST['action'] === 'save_profile') {
         $primary_email = trim($_POST['primary_email'] ?? '');
         $alternate_email = trim($_POST['alternate_email'] ?? '');
@@ -1833,9 +1879,14 @@ foreach ($db['leaves'] ?? [] as $leave) {
                         <div class="form-grid-3" style="margin-top: 1rem;">
                             <div class="form-group-col">
                                 <label>Email(Official) <span style="color:red;">*</span></label>
-                                <div class="input-with-icon">
-                                    <i class="fa-solid fa-envelope"></i>
-                                    <input type="email" id="official_email" name="official_email" required value="<?= htmlspecialchars($current_student['email'] ?? '') ?>" onblur="validateOfficialEmail()">
+                                <div class="input-with-icon" style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <div style="position: relative; flex-grow: 1;">
+                                        <i class="fa-solid fa-envelope" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                        <input type="email" id="official_email" name="official_email" required readonly value="<?= htmlspecialchars($current_student['email'] ?? '') ?>" style="width: 100%; padding-left: 2.5rem; background-color: #f1f5f9; cursor: not-allowed; opacity: 0.8;" title="Click 'Change Email' to update this field">
+                                    </div>
+                                    <button type="button" class="btn-login" style="padding: 0.5rem 0.75rem; font-size: 0.85rem; width: auto; background-color: #4f46e5; flex-shrink: 0;" onclick="openChangeEmailModal()">
+                                        <i class="fa-solid fa-pen-to-square"></i> Change Email
+                                    </button>
                                 </div>
                             </div>
                             <div class="form-group-col">
@@ -3624,6 +3675,54 @@ foreach ($db['leaves'] ?? [] as $leave) {
                 }
             }
         }
+
+        // Change Email Modal Functions
+        function openChangeEmailModal() {
+            const modal = document.getElementById('changeEmailModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.getElementById('change_email_new').value = '';
+                document.getElementById('change_email_password').value = '';
+            }
+        }
+        function closeChangeEmailModal() {
+            const modal = document.getElementById('changeEmailModal');
+            if (modal) modal.style.display = 'none';
+        }
     </script>
+
+    <!-- Change Email Modal -->
+    <div id="changeEmailModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Change Official Email</h2>
+                <span class="close-modal" onclick="closeChangeEmailModal()"><i class="fa-solid fa-xmark"></i></span>
+            </div>
+            <div class="modal-body">
+                <form action="student_dashboard.php" method="POST" id="changeEmailForm">
+                    <input type="hidden" name="action" value="change_official_email">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">New Official Email <span style="color:red;">*</span></label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-envelope"></i>
+                            <input type="email" id="change_email_new" name="new_email" required style="width: 100%;">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Current Password <span style="color:red;">*</span></label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-lock"></i>
+                            <input type="password" id="change_email_password" name="verify_password" required style="width: 100%;">
+                        </div>
+                        <small style="color: var(--text-muted); display: block; margin-top: 0.25rem;">Enter your password to verify this change.</small>
+                    </div>
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button type="button" class="btn-login" style="background-color: #64748b; width: auto; padding: 0.5rem 1rem;" onclick="closeChangeEmailModal()">Cancel</button>
+                        <button type="submit" class="btn-login" style="width: auto; padding: 0.5rem 1.5rem;">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
