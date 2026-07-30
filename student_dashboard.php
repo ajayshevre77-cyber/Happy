@@ -402,9 +402,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($auth_success && !empty($new_email)) {
             // Update in MySQL
             try {
-                $stmt = $pdo->prepare("UPDATE students SET email = ? WHERE zprn = ? OR username = ?");
-                $stmt->execute([$new_email, $student_id, $student_id]);
-            } catch (PDOException $e) {}
+                $stmt = $pdo->prepare("UPDATE students SET email = ? WHERE zprn = ?");
+                $stmt->execute([$new_email, $student_id]);
+            } catch (PDOException $e) {
+                error_log("Failed to update email in MySQL: " . $e->getMessage());
+            }
 
             // Update in db.json
             $db = get_db();
