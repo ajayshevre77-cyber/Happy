@@ -471,13 +471,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'career_choice' => trim($_POST['career_choice'] ?? ''),
             'alumni_institute' => trim($_POST['alumni_institute'] ?? ''),
             
-            // Other tabs
-            'identity_details' => $_POST['identity_details'] ?? [],
-            'religion_details' => $_POST['religion_details'] ?? [],
-            'handicap_details' => $_POST['handicap_details'] ?? [],
-            'minority_details' => $_POST['minority_details'] ?? [],
-            'passport_details' => $_POST['passport_details'] ?? [],
-            'exam_details' => $_POST['exam_details'] ?? []
+            // Other tabs - merge existing if not present in POST
+            'identity_details' => $_POST['identity_details'] ?? ($current_student['profile_details']['identity_details'] ?? []),
+            'religion_details' => $_POST['religion_details'] ?? ($current_student['profile_details']['religion_details'] ?? []),
+            'handicap_details' => $_POST['handicap_details'] ?? ($current_student['profile_details']['handicap_details'] ?? []),
+            'minority_details' => $_POST['minority_details'] ?? ($current_student['profile_details']['minority_details'] ?? []),
+            'passport_details' => $_POST['passport_details'] ?? ($current_student['profile_details']['passport_details'] ?? []),
+            'exam_details' => $_POST['exam_details'] ?? ($current_student['profile_details']['exam_details'] ?? [])
         ];
 
         // Update database record
@@ -630,7 +630,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch fresh updates
-$notices = $db['notices'] ?? [];
+$notices = [];
+foreach ($db['notices'] ?? [] as $n) {
+    $target = $n['target_audience'] ?? 'All Departments';
+    if ($target === 'All Departments' || $target === 'Students Only' || $target === $user['dept']) {
+        $notices[] = $n;
+    }
+}
 $assignments = $db['assignments'] ?? [];
 $leaves = [];
 foreach ($db['leaves'] ?? [] as $leave) {
@@ -875,7 +881,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                 }
                 
                 // Notices
-                $total_notices = count($db['notices'] ?? []);
+                $total_notices = count($notices);
                 ?>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem;">
 
@@ -1213,6 +1219,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                                                             $sub_paths = explode(',', $sub_file); 
                                                                             foreach ($sub_paths as $idx => $spath):
                                                                                 $spath = trim($spath);
+                                                                                $spath = preg_replace('#^uploads/#i', '', $spath);
                                                                                 if (empty($spath)) continue;
                                                                             ?>
                                                                             <a href="uploads/<?= htmlspecialchars($spath) ?>" target="_blank" style="padding: 0.35rem 0.75rem; background: var(--bg-alt); color: #0369a1; border-radius: 4px; font-size: 0.75rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
@@ -1256,6 +1263,9 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                                                         
                                                                         <?php if ($due_passed): ?>
                                                                             <div style="color: #ef4444; font-size: 0.8rem; font-weight: 700; margin-bottom: 1rem;"><i class="fa-solid fa-triangle-exclamation"></i> Submission deadline has passed.</div>
+                                                                            <button type="button" disabled style="background: #9ca3af; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: not-allowed; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(156, 163, 175, 0.25);">
+                                                                                <i class="fa-solid fa-cloud-arrow-up"></i> Upload Now
+                                                                            </button>
                                                                         <?php else: ?>
                                                                             <div style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 1rem;">Upload your completed assignment file here.</div>
                                                                             <button type="button" onclick="openSubjectUploadModal(this)" data-id="<?php echo $sa_item['id']; ?>" data-subject="<?php echo htmlspecialchars($subject_name); ?>" data-unit="<?php echo $unit_num; ?>" style="background: #10b981; color: white; border: none; padding: 0.6rem 1.25rem; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.25); transition: background 0.2s;">
@@ -1878,7 +1888,7 @@ foreach ($db['leaves'] ?? [] as $leave) {
                                 <label>Mobile Number <span style="color:red;">*</span></label>
                                 <div class="input-with-icon">
                                     <i class="fa-solid fa-phone"></i>
-                                    <input type="text" id="personal_mobile" name="mobile_number" required value="<?= htmlspecialchars($current_student['phone'] ?? '') ?>">
+                                    <input type="text" id="personal_mobile" name="mobile_number" required pattern="[0-9]{10}" maxlength="10" minlength="10" title="Mobile Number must be exactly 10 digits." value="<?= htmlspecialchars($current_student['phone'] ?? '') ?>">
                                 </div>
                                 <span class="error-msg-span" id="err_personal_mobile" style="color: #ef4444; font-size: 0.8rem; display: none; margin-top: 0.25rem; font-weight: 500;"></span>
                             </div>
@@ -2364,7 +2374,17 @@ foreach ($db['leaves'] ?? [] as $leave) {
             // Update active states in navigation
             const items = document.querySelectorAll('.sidebar-nav-item');
             items.forEach(item => item.classList.remove('active'));
-            element.classList.add('active');
+            if (element) {
+                element.classList.add('active');
+            } else {
+                items.forEach(item => {
+                    let onclick = item.getAttribute('onclick') || '';
+                    let dataTab = item.getAttribute('data-tab') || '';
+                    if (onclick.includes("'" + tabName + "'") || dataTab === tabName) {
+                        item.classList.add('active');
+                    }
+                });
+            }
 
             // Hide all panels
             const panels = document.querySelectorAll('.app-view');
@@ -3007,11 +3027,11 @@ foreach ($db['leaves'] ?? [] as $leave) {
             if (!email) return;
             let val = email.value.trim();
             if (val !== '' && !val.includes('@')) {
-                val = val + '@gmail.com';
+                val = val + '@college.edu';
                 email.value = val;
             }
-            if (val !== '' && !val.endsWith('@gmail.com')) {
-                email.setCustomValidity('Only @gmail.com addresses are allowed.');
+            if (val !== '' && !val.endsWith('@college.edu')) {
+                email.setCustomValidity('Only @college.edu addresses are allowed.');
                 email.reportValidity();
             } else {
                 email.setCustomValidity('');

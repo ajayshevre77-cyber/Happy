@@ -64,6 +64,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $phone = $_POST['phone'] ?? '';
         $department = $_POST['department'] ?? 'Information Technology';
         
+        $valid_departments = [];
+        if (isset($db['departments'])) {
+            foreach ($db['departments'] as $d) {
+                $valid_departments[] = $d['name'];
+            }
+        }
+        if (!empty($valid_departments) && !in_array($department, $valid_departments)) {
+            $_SESSION['error_message'] = "Invalid department selected.";
+            $_SESSION['active_tab'] = 'user-management';
+            header("Location: admin_dashboard.php");
+            exit;
+        }
+        
         if ($role === 'student') {
             $new_id = '125UIT' . rand(1000, 9999);
             $prn = trim($_POST['prn'] ?? '');
@@ -112,6 +125,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     } elseif ($_POST['action'] === 'import_students') {
         if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] === UPLOAD_ERR_OK) {
+            $file_name = $_FILES['csv_file']['name'];
+            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+            
+            if ($file_ext !== 'csv') {
+                $_SESSION['error_message'] = "Invalid file format. Please upload a .csv file.";
+                $_SESSION['active_tab'] = 'user-management';
+                header("Location: admin_dashboard.php");
+                exit;
+            }
+
             $file = $_FILES['csv_file']['tmp_name'];
             $handle = fopen($file, "r");
             if ($handle !== FALSE) {
@@ -190,6 +213,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $desc = trim($_POST['desc']);
         $expiry = trim($_POST['expiry']);
         $target_audience = trim($_POST['target_audience'] ?? 'All Departments');
+        
+        $valid_audiences = ['All Departments', 'Faculty Only', 'Students Only'];
+        if (isset($db['departments'])) {
+            foreach ($db['departments'] as $d) {
+                $valid_audiences[] = $d['name'];
+            }
+        }
+        if (!in_array($target_audience, $valid_audiences)) {
+            $_SESSION['error_message'] = "Invalid target audience selected.";
+            $_SESSION['active_tab'] = 'notice-management';
+            header("Location: admin_dashboard.php");
+            exit;
+        }
+
         $file_name = '';
 
         if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
@@ -204,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'id' => count($db['notices']) + 1,
                 'title' => $title,
                 'desc' => $desc,
-                'author' => 'System Admin',
+                'author' => $user['name'] ?? 'System Admin',
                 'role' => 'Admin',
                 'target_audience' => $target_audience,
                 'date' => date('d M Y'),
@@ -212,6 +249,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'attachment' => $file_name,
                 'size' => $file_name ? '1.5MB' : ''
             ];
+            $db['recent_activity'] = array_merge([
+                [
+                    'type' => 'notice',
+                    'title' => 'New Notice: ' . $title,
+                    'desc' => 'Published for ' . $target_audience,
+                    'time' => 'Just now'
+                ]
+            ], array_slice($db['recent_activity'] ?? [], 0, 9));
             save_db($db);
             $_SESSION['success_message'] = "Notice published successfully.";
             $_SESSION['active_tab'] = 'notice-management';
@@ -1462,11 +1507,9 @@ if (isset($db['departments'])) {
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Target Audience (Department)</label>
                         <select name="target_audience" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 1rem; outline: none;">
                             <option value="All Departments">All Departments</option>
-                            <option value="Information Technology">Information Technology</option>
-                            <option value="Computer Engineering">Computer Engineering</option>
-                            <option value="Electronics & Telecommunication">Electronics & Telecommunication</option>
-                            <option value="Mechanical Engineering">Mechanical Engineering</option>
-                            <option value="Civil Engineering">Civil Engineering</option>
+                            <?php foreach($db['departments'] ?? [] as $d): ?>
+                                <option value="<?php echo htmlspecialchars($d['name']); ?>"><?php echo htmlspecialchars($d['name']); ?></option>
+                            <?php endforeach; ?>
                             <option value="Faculty Only">Faculty Only</option>
                             <option value="Students Only">Students Only</option>
                         </select>
@@ -1892,7 +1935,7 @@ if (isset($db['departments'])) {
                 .stat-icon.blue { background: #eff6ff; color: #3b82f6; }
                 .stat-icon.green { background: #f0fdf4; color: #22c55e; }
                 .stat-icon.purple { background: #faf5ff; color: #a855f7; }
-                .stat-icon.orange { background: var(--bg-card);beb; color: #f59e0b; }
+                .stat-icon.orange { background: #fef3c7; color: #f59e0b; }
                 .stat-icon.red { background: #fef2f2; color: #ef4444; }
                 .stat-info h3 { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; margin: 0 0 0.25rem 0; letter-spacing: 0.5px; }
                 .stat-info .value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: baseline; gap: 0.5rem; }
@@ -2393,13 +2436,14 @@ if (isset($db['departments'])) {
                 }
                 
                 function renderAODrawerStudents() {
-                    const search = document.getElementById('drawer-search').value.toLowerCase();
+                    const searchRaw = document.getElementById('drawer-search').value.toLowerCase().trim();
+                    const search = searchRaw.replace(/^zprn/i, '');
                     const statusFilter = document.getElementById('drawer-status-filter').value;
                     
                     const filtered = aoDrawerData.filter(s => {
                         let ms = true;
-                        if (search !== '') {
-                            ms = s.name.toLowerCase().includes(search) || s.roll.toLowerCase().includes(search);
+                        if (searchRaw !== '') {
+                            ms = s.name.toLowerCase().includes(searchRaw) || s.roll.toLowerCase().includes(search);
                         }
                         let mStat = true;
                         if (statusFilter !== 'ALL') {
@@ -2451,12 +2495,13 @@ if (isset($db['departments'])) {
 
                 function renderTotalStudentsList() {
                     if (!aoData || !aoData.all_students) return;
-                    const search = document.getElementById('ts-search').value.toLowerCase();
+                    const searchRaw = document.getElementById('ts-search').value.toLowerCase().trim();
+                    const search = searchRaw.replace(/^(zprn|\d{3}[a-z]{3})/i, '');
                     const listEl = document.getElementById('ts-list');
                     let html = '';
                     
                     const filtered = aoData.all_students.filter(s => 
-                        String(s.name).toLowerCase().includes(search) || 
+                        String(s.name).toLowerCase().includes(searchRaw) || 
                         String(s.prn).toLowerCase().includes(search) ||
                         String(s.id).toLowerCase().includes(search)
                     );
@@ -2819,9 +2864,14 @@ if (isset($db['departments'])) {
                                         <?php endif; ?>
                                     </td>
                                     <td style="padding: 0.75rem 0; text-align: right; width: 60px;">
+                                        <?php 
+                                        $readonly_keys = ['system_status', 'database_size', 'total_users', 'admin_users', 'faculty_users', 'student_users', 'total_departments', 'total_courses', 'roles_defined'];
+                                        if (!in_array($key, $readonly_keys)): 
+                                        ?>
                                         <a href="#" onclick="openSettingModal('<?= $key ?>', '<?= addslashes(htmlspecialchars($label)) ?>', '<?= addslashes(htmlspecialchars($val)) ?>'); return false;" style="color: #4f46e5; font-size: 0.8rem; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; transition: color 0.2s;" onmouseover="this.style.color='#3730a3'" onmouseout="this.style.color='#4f46e5'">
                                             <i class="fa-solid fa-pen" style="font-size: 0.75rem;"></i> Edit
                                         </a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
@@ -2865,17 +2915,15 @@ if (isset($db['departments'])) {
 
                 <div class="form-group">
                     <label>Phone Number</label>
-                    <input type="text" name="phone" required placeholder="Enter phone number">
+                    <input type="text" name="phone" required pattern="[0-9]{10}" maxlength="10" minlength="10" title="Mobile Number must be exactly 10 digits." placeholder="Enter phone number">
                 </div>
 
                 <div class="form-group">
                     <label>Department</label>
                     <select name="department" id="deptSelect" onchange="updatePRN()" required>
-                        <option value="Information Technology">Information Technology</option>
-                        <option value="Computer Engineering">Computer Engineering</option>
-                        <option value="Electronics & Telecommunication">Electronics & Telecommunication</option>
-                        <option value="Mechanical Engineering">Mechanical Engineering</option>
-                        <option value="Civil Engineering">Civil Engineering</option>
+                        <?php foreach($db['departments'] ?? [] as $d): ?>
+                            <option value="<?php echo htmlspecialchars($d['name']); ?>"><?php echo htmlspecialchars($d['name']); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 

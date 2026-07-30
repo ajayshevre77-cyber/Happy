@@ -32,21 +32,24 @@ if ($action === 'get_dashboard_summary') {
     $filteredStudents = [];
     $studentIds = [];
     foreach ($db['students'] ?? [] as $s) {
-        $sDept = strtolower($s['department'] ?? $s['dept'] ?? 'it');
-        $sDiv = strtoupper($s['division'] ?? 'A');
+        $sDeptRaw = $s['department'] ?? (isset($s['dept']) ? explode(' - ', $s['dept'])[0] : 'it');
+        $sDept = strtolower(trim($sDeptRaw));
+        $sDiv = strtoupper($s['division'] ?? '');
         
         // Extract division from dept string if necessary (e.g., "IT - Div A")
-        if (empty($s['division']) && preg_match('/Div\s*([A-Z])/i', $sDept, $m)) {
+        if (empty($sDiv) && preg_match('/Div\s*([A-Z])/i', $s['dept'] ?? '', $m)) {
             $sDiv = strtoupper($m[1]);
         }
+        if (empty($sDiv)) $sDiv = 'A';
 
         if ($search !== '') {
-            $q = $search;
+            $q = strtolower(trim(str_ireplace('zprn', '', $search)));
+            $q_original = strtolower(trim($search));
             $prn = strtolower($s['prn'] ?? '');
             $id = strtolower($s['id'] ?? '');
             $name = strtolower($s['name'] ?? '');
             $email = strtolower($s['email'] ?? '');
-            if (strpos($prn, $q) !== false || strpos($id, $q) !== false || strpos($name, $q) !== false || strpos($email, $q) !== false) {
+            if (strpos($prn, $q) !== false || strpos($id, $q) !== false || strpos($name, $q_original) !== false || strpos($email, $q_original) !== false) {
                 $filteredStudents[] = $s;
                 $studentIds[] = $s['id'] ?? $s['username'] ?? $s['prn'];
             }

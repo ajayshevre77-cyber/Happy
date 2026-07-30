@@ -90,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 'desc' => $desc,
                 'author' => $user['name'],
                 'role' => 'Head of Department',
+                'target_audience' => $user['dept'],
                 'date' => date('d M Y'),
                 'expiry' => $expiry,
                 'attachment' => $file_name,
@@ -121,10 +122,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($g['id'] === $g_id) {
                 $g['status'] = 'Resolved';
                 $updated = true;
+                $g_title = $g['subject'];
                 break;
             }
         }
         if ($updated) {
+            $db['recent_activity'] = array_merge([
+                [
+                    'type' => 'grievance',
+                    'title' => 'Grievance Resolved',
+                    'desc' => "Your grievance '{$g_title}' has been resolved.",
+                    'time' => 'Just now'
+                ]
+            ], array_slice($db['recent_activity'] ?? [], 0, 9));
             save_db($db);
             $_SESSION['success_message'] = "Grievance marked as resolved.";
         }
@@ -149,10 +159,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         'message' => $reply_msg
                     ];
                     $updated = true;
+                    $g_title = $g['subject'];
                     break;
                 }
             }
             if ($updated) {
+                $db['recent_activity'] = array_merge([
+                    [
+                        'type' => 'grievance',
+                        'title' => 'Grievance Update',
+                        'desc' => "New reply on your grievance '{$g_title}'",
+                        'time' => 'Just now'
+                    ]
+                ], array_slice($db['recent_activity'] ?? [], 0, 9));
                 save_db($db);
                 $_SESSION['success_message'] = "Reply sent and status updated.";
             } else {
@@ -178,13 +197,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($type === 'Attendance Defaulters') {
             fputcsv($output, ['Student Name', 'ID', 'Department', 'Semester', 'Attendance']);
             foreach ($db['students'] as $s) {
-                if (intval($s['attendance']) < 75 && $s['semester'] == $sem) {
+                $st_info = parse_student_dept_info($s['dept'] ?? $s['department'] ?? '');
+                if (intval($s['attendance']) < 75 && $s['semester'] == $sem && match_department($st_info['department'], $user['dept'])) {
                     fputcsv($output, [$s['name'], $s['id'], $s['dept'], $s['semester'], $s['attendance']]);
                 }
             }
         } elseif ($type === 'Grievance Summary') {
             fputcsv($output, ['Title', 'Student', 'Category', 'Status', 'Date']);
             foreach ($db['grievances'] as $g) {
+                if (isset($g['department']) && !match_department($g['department'], $user['dept'])) continue; // Only filter if department is known
                 fputcsv($output, [$g['title'], $g['student_name'], $g['category'], $g['status'], $g['date']]);
             }
         } else {
@@ -200,7 +221,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // Calculators for dashboard stats
 $total_students = count($db['students']);
 $total_faculty = count($db['faculty']);
-$total_notices = count($db['notices']);
+$total_notices = 0;
+foreach ($db['notices'] as $n) {
+    $target = $n['target_audience'] ?? 'All Departments';
+    if ($target === 'All Departments' || $target === 'Faculty Only' || $target === $user['dept']) {
+        $total_notices++;
+    }
+}
 $unresolved_grievances = 0;
 foreach ($db['grievances'] as $g) {
     if ($g['status'] !== 'Resolved' && $g['status'] !== 'Rejected') {
@@ -216,6 +243,13 @@ if (isset($db['assignment_grievances'])) {
 }
 $pending_leaves = 0;
 foreach ($db['leaves'] as $l) {
+    $l_dept = '';
+    foreach ($db['students'] as $s) {
+        if ((string)$s['prn'] === (string)$l['student_id'] || (string)$s['username'] === (string)$l['student_id']) {
+            $l_dept = $s['department'] ?? $s['dept'] ?? ''; break;
+        }
+    }
+    if (!empty($l_dept) && !match_department($l_dept, $user['dept'])) continue;
     if ($l['status'] === 'Pending') {
         $pending_leaves++;
     }
@@ -569,7 +603,9 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($db['grievances'] as $g): ?>
+                            <?php foreach ($db['grievances'] as $g): 
+                                if (isset($g['department']) && !match_department($g['department'], $user['dept'])) continue;
+                            ?>
                             <tr>
                                 <td>
                                     <div class="notice-title"><?= htmlspecialchars($g['student_name']) ?></div>
@@ -695,7 +731,12 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($db['notices'] as $n): ?>
+                            <?php foreach ($db['notices'] as $n): 
+                                $target = $n['target_audience'] ?? 'All Departments';
+                                if ($target !== 'All Departments' && $target !== 'Faculty Only' && $target !== $user['dept']) {
+                                    continue;
+                                }
+                            ?>
                             <tr>
                                 <td>
                                     <div class="notice-title"><?= htmlspecialchars($n['title']) ?></div>
@@ -936,7 +977,7 @@ $pending_approvals = $pending_leaves + $unresolved_grievances;
                                     <div style="font-size: 0.85rem; color: var(--text-secondary);">Generated on: <?= $r['date'] ?> by System Admin</div>
                                 </div>
                             </div>
-                            <button onclick="window.open('download_report.php?report=<?= urlencode(str_replace(' ', '_', $r['title'])) ?>', '_blank')" style="background: var(--bg-page); border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9';" onmouseout="this.style.background='#f8fafc';"><i class="fa-solid fa-eye" style="margin-right: 0.5rem;"></i> View Report</button>
+                            <button onclick="window.open('download_report.php?report=<?= urlencode(str_replace(' ', '_', $r['title'])) ?>', '_blank')" style="background: var(--bg-page); border: 1px solid var(--border-color); padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-alt)';" onmouseout="this.style.background='var(--bg-page)';"><i class="fa-solid fa-download" style="margin-right: 0.5rem;"></i> Download Report</button>
                         </div>
                         <?php endforeach; ?>
                     </div>

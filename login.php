@@ -38,14 +38,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($user && password_verify($password, $user['password'])) {
-        // Students do not need to be forced to change password after immediate login
-        /*
-        if ($role === 'student' && $user['must_change_password'] == 1) {
-            $_SESSION['temp_zprn'] = $user['zprn'];
-            header("Location: change_password.php");
-            exit;
-        }
-        */
+        // Strict case-sensitive check against stored username (Bugs 4 & 20)
+        $stored_username = ($role === 'student') ? $user['zprn'] : $user['username'];
+        if ($stored_username !== $username) {
+            $error_message = 'Invalid username or password for ' . ucfirst($role) . ' portal.';
+        } else {
+            // Students do not need to be forced to change password after immediate login
+            /*
+            if ($role === 'student' && $user['must_change_password'] == 1) {
+                $_SESSION['temp_zprn'] = $user['zprn'];
+                header("Location: change_password.php");
+                exit;
+            }
+            */
 
         $_SESSION['user'] = [
             'id' => ($role === 'student') ? $user['zprn'] : $user['username'],
@@ -62,8 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'hod': header("Location: hod_dashboard.php"); exit;
             case 'admin': header("Location: admin_dashboard.php"); exit;
         }
+        }
     } else {
-        $error_message = 'Invalid username or password for ' . ucfirst($role) . ' portal.';
+        if (empty($error_message)) {
+            $error_message = 'Invalid username or password for ' . ucfirst($role) . ' portal.';
+        }
     }
 }
 
@@ -313,89 +321,92 @@ switch ($role) {
         };
 
         function forgotPasswordFlow() {
-            const otp = Math.floor(1000 + Math.random() * 9000).toString();
-            
-            Swal.fire({
-                title: 'Mock OTP Sent',
-                html: 'For testing purposes, your OTP is: <strong style="font-size: 1.5rem; color: #4f46e5;">' + otp + '</strong>',
-                icon: 'info',
-                confirmButtonText: 'Continue',
-                confirmButtonColor: '#6366f1'
-            }).then(() => {
+            const usernameInput = document.getElementById('username').value.trim();
+            if (!usernameInput) {
                 Swal.fire({
-                    title: 'Enter OTP',
-                    input: 'text',
-                    inputLabel: 'Please enter the 4-digit OTP',
-                    inputPlaceholder: 'e.g. 1234',
-                    showCancelButton: true,
-                    confirmButtonText: 'Verify',
-                    confirmButtonColor: '#10b981',
-                    cancelButtonColor: '#ef4444',
-                    inputValidator: (value) => {
-                        if (!value) {
-                            return 'You need to enter the OTP!'
-                        }
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        if (result.value === otp) {
-                            Swal.fire({
-                                title: 'Success!',
-                                text: 'OTP Verified. Proceeding to password reset...',
-                                icon: 'success',
-                                confirmButtonColor: '#6366f1'
-                            }).then(() => {
-                                Swal.fire({
-                                    title: 'Reset Password',
-                                    html:
-                                        '<input id="swal-input-user" class="swal2-input" placeholder="Enter your username (e.g. prasad)">' +
-                                        '<input id="swal-input-pass" class="swal2-input" type="password" placeholder="Enter new password">',
-                                    focusConfirm: false,
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Reset Password',
-                                    confirmButtonColor: '#10b981',
-                                    preConfirm: () => {
-                                        const user = document.getElementById('swal-input-user').value;
-                                        const pass = document.getElementById('swal-input-pass').value;
-                                        if (!user || !pass) {
-                                            Swal.showValidationMessage('Please enter both username and new password');
-                                        }
-                                        return { username: user, new_password: pass };
-                                    }
-                                }).then((formResult) => {
-                                    if (formResult.isConfirmed) {
-                                        const formData = new FormData();
-                                        formData.append('username', formResult.value.username);
-                                        formData.append('new_password', formResult.value.new_password);
-                                        
-                                        fetch('reset_password.php', {
-                                            method: 'POST',
-                                            body: formData
-                                        })
-                                        .then(res => res.json())
-                                        .then(data => {
-                                            if (data.success) {
-                                                Swal.fire('Updated!', 'Your password has been successfully reset.', 'success');
-                                            } else {
-                                                Swal.fire('Error', data.message || 'Could not reset password', 'error');
-                                            }
-                                        })
-                                        .catch(() => {
-                                            Swal.fire('Error', 'An unexpected error occurred.', 'error');
-                                        });
-                                    }
-                                });
-                            });
-                        } else {
-                            Swal.fire({
-                                title: 'Incorrect OTP',
-                                text: 'The OTP you entered is wrong. Please try again.',
-                                icon: 'error',
-                                confirmButtonColor: '#ef4444'
-                            });
-                        }
-                    }
+                    title: 'Error',
+                    text: 'Please enter your username first before resetting your password.',
+                    icon: 'error',
+                    confirmButtonColor: '#ef4444'
                 });
+                return;
+            }
+            
+            const roleInput = document.querySelector('input[name="role"]').value;
+            
+            // Show loading state
+            Swal.fire({
+                title: 'Sending OTP...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            const formData = new FormData();
+            formData.append('username', usernameInput);
+            formData.append('role', roleInput);
+            
+            fetch('send_otp.php', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    Swal.fire('Error', data.message, 'error');
+                    return;
+                }
+                
+                Swal.fire({
+                    title: 'OTP Sent',
+                    text: 'An OTP has been sent securely to your registered email address.',
+                    icon: 'info',
+                    confirmButtonText: 'Enter OTP',
+                    confirmButtonColor: '#6366f1'
+                }).then(() => {
+                    Swal.fire({
+                        title: 'Reset Password',
+                        html:
+                            '<input id="swal-input-otp" class="swal2-input" placeholder="Enter the 4-digit OTP" type="text">' +
+                            '<input id="swal-input-pass" class="swal2-input" type="password" placeholder="Enter new password">',
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: 'Reset Password',
+                        confirmButtonColor: '#10b981',
+                        preConfirm: () => {
+                            const otp = document.getElementById('swal-input-otp').value;
+                            const pass = document.getElementById('swal-input-pass').value;
+                            if (!otp || !pass) {
+                                Swal.showValidationMessage('Please enter both OTP and new password');
+                            }
+                            return { otp: otp, new_password: pass };
+                        }
+                    }).then((formResult) => {
+                        if (formResult.isConfirmed) {
+                            const resetData = new FormData();
+                            resetData.append('username', usernameInput);
+                            resetData.append('new_password', formResult.value.new_password);
+                            resetData.append('otp', formResult.value.otp);
+                            
+                            fetch('reset_password.php', {
+                                method: 'POST',
+                                body: resetData
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire('Updated!', data.message, 'success');
+                                } else {
+                                    Swal.fire('Error', data.message, 'error');
+                                }
+                            })
+                            .catch(() => {
+                                Swal.fire('Error', 'An unexpected error occurred.', 'error');
+                            });
+                        }
+                    });
+                });
+            })
+            .catch(() => {
+                Swal.fire('Error', 'Failed to send OTP.', 'error');
             });
         }
     </script>
