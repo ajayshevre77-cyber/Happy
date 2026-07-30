@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'db.php';
+require_once 'config.php';
 
 if (!isset($_SESSION['user'])) {
     header("Location: login.php");
@@ -13,13 +14,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $raw_id = $_POST['id'] ?? '';
     $db = get_db();
     
-    $allowed_types = ['leaves', 'grievances', 'notices', 'assignments', 'subject_assignments'];
+    $allowed_types = ['leaves', 'grievances', 'notices', 'assignments', 'subject_assignments', 'faculty'];
     
     if (in_array($type, $allowed_types) && ($id > 0 || !empty($raw_id))) {
         $found = false;
+        $deleted_username = '';
         if (isset($db[$type])) {
             foreach ($db[$type] as $key => $item) {
                 if (isset($item['id']) && ($item['id'] == $id || (string)$item['id'] === (string)$raw_id)) {
+                    $deleted_username = $item['username'] ?? '';
                     unset($db[$type][$key]);
                     $db[$type] = array_values($db[$type]);
                     $found = true;
@@ -46,10 +49,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 }));
             }
         }
+
+        // MySQL DB Consistency for Faculty
+        if ($type === 'faculty' && $found && !empty($deleted_username)) {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM faculty WHERE username = ?");
+                $stmt->execute([$deleted_username]);
+            } catch (PDOException $e) {
+                // Ignore errors gracefully for local fallback
+            }
+        }
         
         if ($found) {
             save_db($db);
             $_SESSION['success_message'] = ucfirst(rtrim($type, 's')) . " deleted successfully.";
+            
+            if ($type === 'faculty') {
+                $_SESSION['success_message'] = "Faculty member deleted successfully.";
+                $_SESSION['active_tab'] = 'user-management';
+            }
         } else {
             $_SESSION['error_message'] = "Item not found.";
         }

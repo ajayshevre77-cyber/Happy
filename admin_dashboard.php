@@ -1353,6 +1353,7 @@ if (isset($db['departments'])) {
                             <th>Email</th>
                             <th>Phone</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1397,6 +1398,18 @@ if (isset($db['departments'])) {
                             echo "<td>".htmlspecialchars($f['email'])."</td>";
                             echo "<td>".htmlspecialchars($f['phone'])."</td>";
                             echo "<td><span style='color: #22c55e; font-weight: 500;'><i class='fa-solid fa-circle' style='font-size: 8px; margin-right: 4px;'></i> Active</span></td>";
+                            echo "<td>";
+                            if (!$isHod) {
+                                echo "<form method='POST' action='delete.php' style='display:inline;' onsubmit='return confirm(\"Are you sure you want to delete this faculty member?\");'>
+                                        <input type='hidden' name='action' value='delete_item'>
+                                        <input type='hidden' name='type' value='faculty'>
+                                        <input type='hidden' name='id' value='".htmlspecialchars($f['id'])."'>
+                                        <button type='submit' style='background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;' title='Delete Faculty'>
+                                            <i class='fa-solid fa-trash'></i>
+                                        </button>
+                                      </form>";
+                            }
+                            echo "</td>";
                             echo "</tr>";
                         }
                         
@@ -1412,19 +1425,21 @@ if (isset($db['departments'])) {
                                 'department' => $student_dept,
                                 'subjects' => 'N/A',
                                 'email' => $s['email'],
-                                'phone' => $s['phone'],
-                                'avatar' => isset($s['avatar']) && !empty($s['avatar']) ? $s['avatar'] : 'https://ui-avatars.com/api/?name='.urlencode($s['name']).'&background=random'
+                                'email' => $s['email'] ?? 'N/A',
+                                'phone' => $s['mobile'] ?? 'N/A',
+                                'avatar' => $avatar
                             ]), ENT_QUOTES, 'UTF-8');
                             
                             echo "<tr>";
-                            echo "<td><div class='user-cell'><span class='user-name-link' onclick='showUserProfile(this)' data-user='{$user_data}'>".htmlspecialchars($s['name'])."</span></div></td>";
-                            echo "<td><span style='font-size:0.9rem; color:#4f46e5; font-weight:700;'>".htmlspecialchars($display_prn)."</span></td>";
+                            echo "<td><div class='user-cell'><img src='".htmlspecialchars($avatar)."' alt='Avatar' class='user-avatar'><span class='user-name-link' onclick='showUserProfile(this)' data-user='{$user_data}'>".htmlspecialchars($s['name'])."</span></div></td>";
+                            echo "<td><span style='font-size:0.85rem; color: var(--text-secondary); font-weight:600;'>".htmlspecialchars($display_prn)."</span></td>";
                             echo "<td><span class='badge badge-student'>Student</span></td>";
                             echo "<td>".htmlspecialchars($student_dept)."</td>";
                             echo "<td>-</td>";
-                            echo "<td>".htmlspecialchars($s['email'])."</td>";
-                            echo "<td>".htmlspecialchars($s['phone'])."</td>";
-                            echo "<td><span style='color: #22c55e; font-weight: 500;'><i class='fa-solid fa-circle' style='font-size: 8px; margin-right: 4px;'></i> Active</span></td>";
+                            echo "<td>".htmlspecialchars($s['email'] ?? 'N/A')."</td>";
+                            echo "<td>".htmlspecialchars($s['mobile'] ?? 'N/A')."</td>";
+                            echo "<td><span style='color: #22c55e; font-weight: 500;'><i class='fa-solid fa-circle' style='font-size: 8px; margin-right: 4px;'></i> {$statusLabel}</span></td>";
+                            echo "<td></td>"; // Empty action column for students
                             echo "</tr>";
                         }
                         ?>
