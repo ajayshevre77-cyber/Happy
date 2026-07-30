@@ -491,6 +491,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (isset($_POST['official_email'])) {
                     $s['email'] = trim($_POST['official_email']);
                     $_SESSION['user']['email'] = $s['email']; // Keep session in sync if needed
+                    
+                    // Update MySQL Database to ensure OTPs go to the new email
+                    require_once 'config.php';
+                    try {
+                        $stmt = $pdo->prepare("UPDATE students SET email = ? WHERE zprn = ? OR username = ?");
+                        $stmt->execute([$s['email'], $student_id, $student_id]);
+                    } catch (PDOException $e) {
+                        // Silently handle error if DB fails
+                    }
                 }
                 $s['profile_details'] = $profile_data;
                 
