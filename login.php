@@ -22,31 +22,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($role === 'student') {
         $stmt = $pdo->prepare("SELECT * FROM students WHERE BINARY zprn = ? OR email = ?");
         $stmt->execute([$username, $username]);
-        $user = $stmt->fetch();
+        $users = $stmt->fetchAll();
     } elseif ($role === 'faculty') {
         $stmt = $pdo->prepare("SELECT * FROM faculty WHERE BINARY username = ? OR email = ?");
         $stmt->execute([$username, $username]);
-        $user = $stmt->fetch();
+        $users = $stmt->fetchAll();
     } elseif ($role === 'hod') {
         $stmt = $pdo->prepare("SELECT * FROM hod WHERE BINARY username = ? OR email = ?");
         $stmt->execute([$username, $username]);
-        $user = $stmt->fetch();
+        $users = $stmt->fetchAll();
     } elseif ($role === 'admin') {
         $stmt = $pdo->prepare("SELECT * FROM admin WHERE BINARY username = ? OR email = ?");
         $stmt->execute([$username, $username]);
-        $user = $stmt->fetch();
+        $users = $stmt->fetchAll();
     }
 
     $auth_success = false;
-    if ($user) {
-        if ($role === 'student') {
-            $auth_success = ($password === $user['zprn'] || password_verify($password, $user['password']));
-        } else {
-            $auth_success = password_verify($password, $user['password']);
+    $valid_user = null;
+    if (!empty($users)) {
+        foreach ($users as $u) {
+            $is_valid = false;
+            if ($role === 'student') {
+                $is_valid = ($password === $u['zprn'] || password_verify($password, $u['password']));
+            } else {
+                $is_valid = password_verify($password, $u['password']);
+            }
+            if ($is_valid) {
+                $auth_success = true;
+                $valid_user = $u;
+                break;
+            }
         }
     }
 
-    if ($auth_success) {
+    if ($auth_success && $valid_user) {
+        $user = $valid_user;
         // Strict case-sensitive check against stored username or email
         $stored_username = ($role === 'student') ? $user['zprn'] : $user['username'];
         $stored_email = $user['email'] ?? '';
