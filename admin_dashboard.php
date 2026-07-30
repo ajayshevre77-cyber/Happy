@@ -1979,16 +1979,19 @@ if (isset($db['departments'])) {
                     <?php endforeach; ?>
                 </select>
                 <select id="ao-year" onchange="fetchAOData()">
+                    <option value="ALL">All Years</option>
                     <option value="1">1st Year</option>
                     <option value="2">2nd Year</option>
                     <option value="3">3rd Year</option>
                     <option value="4">4th Year</option>
                 </select>
                 <select id="ao-sem" onchange="fetchAOData()">
+                    <option value="ALL">All Semesters</option>
                     <option value="1">Semester 1</option>
                     <option value="2">Semester 2</option>
                 </select>
                 <select id="ao-div" onchange="fetchAOData()">
+                    <option value="ALL">All Divisions</option>
                     <option value="A">Div A</option>
                     <option value="B">Div B</option>
                     <option value="C">Div C</option>

@@ -21,9 +21,9 @@ function getAbsoluteSem($semesterStr) {
 
 if ($action === 'get_dashboard_summary') {
     $reqDept = trim(strtolower($_GET['dept'] ?? 'ALL'));
-    $reqYear = intval($_GET['year'] ?? 1);
-    $reqSem = intval($_GET['sem'] ?? 1);
-    $reqDiv = trim(strtoupper($_GET['div'] ?? 'A'));
+    $reqYear = isset($_GET['year']) && strtoupper($_GET['year']) === 'ALL' ? 'ALL' : intval($_GET['year'] ?? 1);
+    $reqSem = isset($_GET['sem']) && strtoupper($_GET['sem']) === 'ALL' ? 'ALL' : intval($_GET['sem'] ?? 1);
+    $reqDiv = isset($_GET['div']) && strtoupper($_GET['div']) === 'ALL' ? 'ALL' : trim(strtoupper($_GET['div'] ?? 'A'));
     $search = trim(strtolower($_GET['search'] ?? ''));
 
     $absoluteSem = ($reqYear - 1) * 2 + $reqSem;
@@ -52,8 +52,12 @@ if ($action === 'get_dashboard_summary') {
             }
         } else {
             $sSemVal = getAbsoluteSem($s['semester'] ?? '');
-            $matchSem = ($sSemVal === $absoluteSem);
-            $matchDiv = ($sDiv === $reqDiv);
+            if ($reqYear === 'ALL' || $reqSem === 'ALL') {
+                $matchSem = true;
+            } else {
+                $matchSem = ($sSemVal === $absoluteSem);
+            }
+            $matchDiv = ($reqDiv === 'ALL' || $sDiv === $reqDiv);
             $matchDept = true;
             if ($reqDept !== 'all') {
                 $matchDept = ($sDept === $reqDept || strpos($sDept, $reqDept) !== false);
@@ -719,9 +723,9 @@ if ($action === 'get_student_subject_assignments') {
 
 if ($action === 'export_student_assignment_report') {
     $reqDept = trim(strtolower($_GET['dept'] ?? 'ALL'));
-    $reqYear = intval($_GET['year'] ?? 1);
-    $reqSem = intval($_GET['sem'] ?? 1);
-    $reqDiv = trim(strtoupper($_GET['div'] ?? 'A'));
+    $reqYear = isset($_GET['year']) && strtoupper($_GET['year']) === 'ALL' ? 'ALL' : intval($_GET['year'] ?? 1);
+    $reqSem = isset($_GET['sem']) && strtoupper($_GET['sem']) === 'ALL' ? 'ALL' : intval($_GET['sem'] ?? 1);
+    $reqDiv = isset($_GET['div']) && strtoupper($_GET['div']) === 'ALL' ? 'ALL' : trim(strtoupper($_GET['div'] ?? 'A'));
     $search = trim(strtolower($_GET['search'] ?? ''));
 
     $absoluteSem = ($reqYear - 1) * 2 + $reqSem;
@@ -737,8 +741,12 @@ if ($action === 'export_student_assignment_report') {
 
         $matchDept = ($reqDept === 'all' || $sDept === $reqDept || strpos($sDept, $reqDept) !== false);
         $sSemVal = getAbsoluteSem($s['semester'] ?? '');
-        $matchSem = ($sSemVal === $absoluteSem);
-        $matchDiv = ($sDiv === $reqDiv);
+        if ($reqYear === 'ALL' || $reqSem === 'ALL') {
+            $matchSem = true;
+        } else {
+            $matchSem = ($sSemVal === $absoluteSem);
+        }
+        $matchDiv = ($reqDiv === 'ALL' || $sDiv === $reqDiv);
 
         if ($search !== '') {
             $q = $search;
