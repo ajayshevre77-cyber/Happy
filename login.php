@@ -385,7 +385,7 @@ switch ($role) {
                     Swal.fire({
                         title: 'Reset Password',
                         html:
-                            '<input id="swal-input-otp" class="swal2-input" placeholder="Enter the 4-digit OTP" type="text">' +
+                            '<input id="swal-input-otp" class="swal2-input" placeholder="Enter the 6-digit OTP" type="text">' +
                             '<input id="swal-input-pass" class="swal2-input" type="password" placeholder="Enter new password">',
                         focusConfirm: false,
                         showCancelButton: true,

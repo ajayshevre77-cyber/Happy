@@ -1418,13 +1418,15 @@ if (isset($db['departments'])) {
                             $student_dept = $get_shortform($student_dept);
                             $display_prn = !empty($s['prn']) ? $s['prn'] : $s['id'];
                             
+                            $avatar = isset($s['avatar']) && !empty($s['avatar']) ? $s['avatar'] : 'https://ui-avatars.com/api/?name='.urlencode($s['name']).'&background=random';
+                            $statusLabel = isset($s['status']) && !empty($s['status']) ? $s['status'] : 'Active';
+                            
                             $user_data = htmlspecialchars(json_encode([
                                 'name' => $s['name'],
                                 'role' => 'Student',
                                 'prn' => $display_prn,
                                 'department' => $student_dept,
                                 'subjects' => 'N/A',
-                                'email' => $s['email'],
                                 'email' => $s['email'] ?? 'N/A',
                                 'phone' => $s['mobile'] ?? 'N/A',
                                 'avatar' => $avatar
